@@ -1,0 +1,301 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+using UnityEngine.Audio;
+
+public class Graphics : MonoBehaviour
+{
+    public Toggle fullscreenTog, vsyncTog, reflectionTog;
+    public GameObject graphicsSettings, audioSettings, controlsSettings;
+
+    //Resoluciones
+    public List<ResItem> resolutions = new List<ResItem>();
+    private int selectedRes;
+    public TMP_Text resolutionLabel;
+
+    //Calidades
+    public List<QualityItem> qualities = new List<QualityItem>();
+    private int selectedQuality;
+    public TMP_Text qualityLabel;
+
+    //Reflection Probes
+    public GameObject reflectionProbes;
+
+    //Menus
+    public GameObject graphicsMenu, audioMenu, controlsMenu;
+
+    //Audio
+    public AudioMixer mainMixer;
+    public TMP_Text masterLabel, musicLabel, effectsLabel;
+    public Slider masterSlider, musicSlider, effectsSlider;
+
+    // Start is called before the first frame update
+    void Start()
+    {
+        fullscreenTog.isOn = Screen.fullScreen;
+
+        if (QualitySettings.vSyncCount == 0)
+        {
+            vsyncTog.isOn = false;
+        }
+        else
+        {
+            vsyncTog.isOn = true;
+        }
+
+        float ReflectionFloat = PlayerPrefs.GetFloat("Reflections");
+        if(ReflectionFloat == 0)
+        {
+            reflectionProbes.SetActive(false);
+            reflectionTog.isOn = false;
+        }
+        else
+        {
+            reflectionProbes.SetActive(true);
+            reflectionTog.isOn = true;
+        }
+
+        bool foundRes = false;
+        for(int i = 0; i < resolutions.Count; i++)
+        {
+            if(Screen.width == resolutions[i].horizontal && Screen.height == resolutions[i].vertical)
+            {
+                foundRes = true;
+
+                selectedRes = i;
+
+                UpdateResLabel();
+            }
+        }
+
+        if (!foundRes)
+        {
+            FindClosestResolution();
+        }
+
+        selectedQuality = QualitySettings.GetQualityLevel();
+        UpdateQualityLabel();
+
+        //Audio setting saved
+        if (PlayerPrefs.HasKey("MasterVol"))
+        {
+            mainMixer.SetFloat("MasterVol", PlayerPrefs.GetFloat("MasterVol"));
+        }
+        if (PlayerPrefs.HasKey("MusicVol"))
+        {
+            mainMixer.SetFloat("MusicVol", PlayerPrefs.GetFloat("MusicVol"));
+        }
+        if (PlayerPrefs.HasKey("EffectsVol"))
+        {
+            mainMixer.SetFloat("EffectsVol", PlayerPrefs.GetFloat("EffectsVol"));
+        }
+
+        //Set initial volume values to sliders
+        float vol;
+        mainMixer.GetFloat("MasterVol", out vol);
+        masterSlider.value = vol;
+        mainMixer.GetFloat("MusicVol", out vol);
+        musicSlider.value = vol;
+        mainMixer.GetFloat("EffectsVol", out vol);
+        effectsSlider.value = vol;
+
+        masterLabel.text = (masterSlider.value + 80).ToString();
+        musicLabel.text = (musicSlider.value + 80).ToString();
+        effectsLabel.text = (effectsSlider.value + 80).ToString();
+
+        //Configuration menus 
+        graphicsSettings.SetActive(true);
+        audioSettings.SetActive(false);
+        controlsSettings.SetActive(false);
+
+        graphicsMenu.SetActive(true);
+        controlsMenu.SetActive(false);
+        audioMenu.SetActive(false);
+    }
+
+    public void MenusNotActive()
+    {
+        graphicsSettings.SetActive(false);
+        audioSettings.SetActive(false);
+        controlsSettings.SetActive(false);
+
+        graphicsMenu.SetActive(false);
+        controlsMenu.SetActive(false);
+        audioMenu.SetActive(false);
+    }
+
+    public void GraphicsActive()
+    {
+        graphicsSettings.SetActive(true);
+        graphicsMenu.SetActive(true);
+    }
+
+    public void AudioActive()
+    {
+        audioSettings.SetActive(true);
+        audioMenu.SetActive(true);
+    }
+
+    public void ControlsActive()
+    {
+        controlsSettings.SetActive(true);
+        controlsMenu.SetActive(true);
+    }
+
+    public void FindClosestResolution()
+    {
+        // Calcular la diferencia entre la resolución actual y la primera resolución de la lista
+        int closestDistance = Screen.currentResolution.width - resolutions[0].horizontal;
+
+        // Iterar sobre todas las resoluciones predefinidas para encontrar la más cercana
+        for (int i = 0; i < resolutions.Count; i++)
+        {
+            //Cuando sea una resolución mayor al tamaño de la pantalla, volver a calcular con la siguiente resolución
+            if(closestDistance < 0)
+            {
+                closestDistance = Screen.currentResolution.width - resolutions[i + 1].horizontal;
+            }
+
+            // Calcular la diferencia entre la resolución actual y la resolución actual del bucle
+            int distance = Screen.currentResolution.width - resolutions[i].horizontal;
+
+            //Si la distancia es menor a cero, vuelve a calacularla con la siguiente resolución
+            if (distance < 0)
+            {
+                resolutions.Remove(resolutions[i]);
+                distance = Screen.currentResolution.width - resolutions[i + 1].horizontal;
+            }
+
+            // Si la distancia calculada es menor que la distancia más cercana actual, actualizar la resolución más cercana
+            if (distance > 0 && distance <= closestDistance)
+            {
+                closestDistance = distance;
+                selectedRes = i;
+            }
+        }
+
+        UpdateResLabel();
+    }
+
+    public void ApplyGraphics()
+    {
+        QualitySettings.SetQualityLevel(selectedQuality,true);
+
+        if (vsyncTog.isOn)
+        {
+            QualitySettings.vSyncCount = 1;
+        }
+        else
+        {
+            QualitySettings.vSyncCount = 0;
+        }
+
+        Screen.SetResolution(resolutions[selectedRes].horizontal, resolutions[selectedRes].vertical,fullscreenTog.isOn);
+
+        if (reflectionTog.isOn == false)
+        {
+            reflectionProbes.SetActive(false);
+            PlayerPrefs.SetFloat("Reflections", 0);
+        }
+        else
+        {
+            reflectionProbes.SetActive(true);
+            PlayerPrefs.SetFloat("Reflections", 1);
+        }
+    }
+
+    public void SetMasterVolume()
+    {
+        masterLabel.text = (masterSlider.value + 80).ToString();
+
+        mainMixer.SetFloat("MasterVol", masterSlider.value);
+
+        PlayerPrefs.SetFloat("MasterVol", masterSlider.value);
+    }
+
+    public void SetMusicVolume()
+    {
+        musicLabel.text = (musicSlider.value + 80).ToString();
+
+        mainMixer.SetFloat("MusicVol", musicSlider.value);
+
+        PlayerPrefs.SetFloat("MusicVol", musicSlider.value);
+    }
+
+    public void SetEffectVolume()
+    {
+        effectsLabel.text = (effectsSlider.value + 80).ToString();
+
+        mainMixer.SetFloat("EffectsVol", effectsSlider.value);
+
+        PlayerPrefs.SetFloat("EffectsVol", effectsSlider.value);
+    }
+
+    public void ResLeft()
+    {
+        selectedRes--;
+        if(selectedRes < 0)
+        {
+            selectedRes = 0;
+        }
+
+        UpdateResLabel();
+    }
+
+    public void ResRight()
+    {
+        selectedRes++;
+        if (selectedRes > resolutions.Count - 1)
+        {
+            selectedRes = resolutions.Count - 1;
+        }
+
+        UpdateResLabel();
+    }
+
+    public void QualityLeft()
+    {
+        selectedQuality--;
+        if (selectedQuality < 0)
+        {
+            selectedQuality = 0;
+        }
+
+        UpdateQualityLabel();
+    }
+
+    public void QualityRight()
+    {
+        selectedQuality++;
+        if (selectedQuality > qualities.Count - 1)
+        {
+            selectedQuality = qualities.Count - 1;
+        }
+
+        UpdateQualityLabel();
+    }
+
+    public void UpdateResLabel()
+    {
+        resolutionLabel.text = resolutions[selectedRes].horizontal.ToString() + " x " + resolutions[selectedRes].vertical.ToString();
+    }
+
+    public void UpdateQualityLabel()
+    {
+        qualityLabel.text = qualities[selectedQuality].qualityName.ToString();
+    }
+
+    [System.Serializable]
+    public class ResItem
+    {
+        public int horizontal, vertical;
+    }
+
+    [System.Serializable]
+    public class QualityItem
+    {
+        public string qualityName;
+    }
+}

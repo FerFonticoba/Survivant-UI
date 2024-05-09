@@ -4,6 +4,8 @@ using Photon.Pun;
 using Photon.Realtime;
 using TMPro;
 
+//This code contains all the logic for the game's main menu buttons.
+
 public class Launcher : MonoBehaviourPunCallbacks
 {
     public static Launcher instance;
