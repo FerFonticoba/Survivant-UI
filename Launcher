@@ -4,54 +4,54 @@ using Photon.Pun;
 using Photon.Realtime;
 using TMPro;
 
-//This code contains all the logic for the game's main menu buttons.
-
+// This code contains all the logic for the game's main menu buttons.
 public class Launcher : MonoBehaviourPunCallbacks
 {
+    // Singleton instance
     public static Launcher instance;
 
-    //Buttons
+    // Buttons
     public GameObject menuButtons, appearanceButtons, configurationMenu, startButton;
 
-    //Effects
+    // Effects
     public MenuCameraMovement CameraMovement;
     public Mainmenueffects menuEffects;
 
-    //Create Room Objects
+    // Create Room Objects
     public GameObject createRoomScreen;
     public TMP_InputField roomNameInput;
 
-    //Room
+    // Room
     public GameObject roomScreen;
     public TMP_Text roomNameText;
 
-    //Error screen
+    // Error screen
     public GameObject errorScreen;
     public TMP_Text errorText;
 
-    //Finding Room Variables
+    // Finding Room Variables
     public GameObject roomBrowserScreen;
     public RoomButtonScript theRoomButton;
     private List<RoomButtonScript> allRoomButtons = new List<RoomButtonScript>();
 
-    //Players Names 
+    // Players Names
     public TMP_Text playerNameLabel;
     private List<TMP_Text> allPlayerNames = new List<TMP_Text>();
 
-    //Write your name
+    // Write your name
     public GameObject nameInputScreen;
     public TMP_InputField nameInput;
     public static int hasSetNick = 0;
     public TMP_Text username;
 
-    //Loading Bar Variables
+    // Loading Bar Variables
     public GameObject loadingScreen;
     public TMP_Text loadingText;
 
-    //Changing Maps
+    // Changing Maps
     public string[] allMaps;
 
-    //Sending info between scenes
+    // Sending info between scenes
     public Send SendVariable;
 
     private void Awake()
@@ -61,7 +61,7 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     void Start()
     {
-        //Call the CloseMenus function to verify that all screens are closed.
+        // Call the CloseMenus function to verify that all screens are closed.
         CloseMenus();
 
         loadingScreen.SetActive(true);
@@ -75,6 +75,7 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     void CloseMenus()
     {
+        // Close all menu screens
         loadingScreen.SetActive(false);
         menuButtons.SetActive(false);
         createRoomScreen.SetActive(false);
@@ -86,6 +87,7 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public override void OnConnectedToMaster()
     {
+        // Once connected to the Photon master server, join the lobby
         PhotonNetwork.JoinLobby();
 
         PhotonNetwork.AutomaticallySyncScene = true;
@@ -95,37 +97,34 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public override void OnJoinedLobby()
     {
+        // Set player's nickname and manage username screen logic
         PhotonNetwork.NickName = "Player " + Random.Range(1, 9).ToString();
 
-        //Player username logic.
         if (PlayerPrefs.GetInt("UserName") != 1)
         {
             CloseMenus();
-            //When you open this screen, you can type your new name and save it (using buttons that will call other functions).
             nameInputScreen.SetActive(true);
 
             if (PlayerPrefs.HasKey("playerName"))
             {
-                //When you open the page to change your name, if you already had a name saved, display it.
                 nameInput.text = PlayerPrefs.GetString("playerName");
             }
         }
         else
         {
-            //If a name is already saved, display it.
             PhotonNetwork.NickName = PlayerPrefs.GetString("playerName");
             nameInput.text = PlayerPrefs.GetString("playerName");
             CloseMenus();
             menuButtons.SetActive(true);
         }
 
-        //Showing the username in the menu.
+        // Show the username in the menu
         username.text = nameInput.text;
     }
 
     public void EditNickName()
     {
-        //Shows on the username screen the name you had previously selected.
+        // Allow editing of nickname
         CloseMenus();
         nameInputScreen.SetActive(true);
 
@@ -137,18 +136,19 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void OpenRoomCreate()
     {
+        // Open room creation screen
         CloseMenus();
         createRoomScreen.SetActive(true);
     }
 
     public void CreateRoom()
     {
+        // Create a room with specified options
         if (!string.IsNullOrEmpty(roomNameInput.text))
         {
             RoomOptions options = new RoomOptions();
             options.MaxPlayers = 8;
 
-            //Create a room for 8 players with the name you wrote.
             PhotonNetwork.CreateRoom(roomNameInput.text, options);
 
             CloseMenus();
@@ -159,6 +159,7 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public override void OnJoinedRoom()
     {
+        // Once joined a room, show room screen and handle UI elements accordingly
         CloseMenus();
         roomScreen.SetActive(true);
 
@@ -166,7 +167,6 @@ public class Launcher : MonoBehaviourPunCallbacks
 
         ListAllPlayers();
 
-        //Only the room creator can start the game.
         if (PhotonNetwork.IsMasterClient)
         {
             startButton.SetActive(true);
@@ -179,28 +179,27 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     private void ListAllPlayers()
     {
+        // Display all players in the room
         foreach (TMP_Text player in allPlayerNames)
         {
             Destroy(player.gameObject);
         }
         allPlayerNames.Clear();
 
-        //Create a list with all the players, to show their names below.
         Player[] players = PhotonNetwork.PlayerList;
-        for(int i = 0; i < players.Length; i++)
+        for (int i = 0; i < players.Length; i++)
         {
             TMP_Text newPlayerLabel = Instantiate(playerNameLabel, playerNameLabel.transform.parent);
             newPlayerLabel.text = players[i].NickName;
             newPlayerLabel.gameObject.SetActive(true);
 
-            //Adding each player name to the list.
             allPlayerNames.Add(newPlayerLabel);
         }
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
     {
-        //Adding the player's name to the list once they enter the room.
+        // When a player enters the room, add their name to the list
         TMP_Text newPlayerLabel = Instantiate(playerNameLabel, playerNameLabel.transform.parent);
         newPlayerLabel.text = newPlayer.NickName;
         newPlayerLabel.gameObject.SetActive(true);
@@ -210,11 +209,13 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public override void OnPlayerLeftRoom(Player otherPlayer)
     {
+        // When a player leaves the room, refresh the list of players
         ListAllPlayers();
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)
     {
+        // Show error message if room creation fails
         errorText.text = "Failed To Create Room: " + message;
         CloseMenus();
         errorScreen.SetActive(true);
@@ -222,12 +223,14 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void CloseErrorScreen()
     {
+        // Close error screen and show room screen
         CloseMenus();
         roomScreen.SetActive(true);
     }
 
     public void LeaveRoom()
     {
+        // Leave the current room
         PhotonNetwork.LeaveRoom();
         CloseMenus();
         loadingText.text = "Leaving Room";
@@ -236,26 +239,29 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public override void OnLeftRoom()
     {
+        // When leaving a room, show menu buttons
         CloseMenus();
         menuButtons.SetActive(true);
     }
 
     public void OpenRoomBrowser()
     {
+        // Open room browser
         CloseMenus();
         roomBrowserScreen.SetActive(true);
     }
 
     public void CloseRoomBrowser()
     {
+        // Close room browser and show menu buttons
         CloseMenus();
         menuButtons.SetActive(true);
     }
 
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
     {
-        //Updates the list of rooms every time a player generates or eliminates one.
-        foreach(RoomButtonScript rb in allRoomButtons)
+        // Update the list of available rooms
+        foreach (RoomButtonScript rb in allRoomButtons)
         {
             Destroy(rb.gameObject);
         }
@@ -263,9 +269,9 @@ public class Launcher : MonoBehaviourPunCallbacks
 
         theRoomButton.gameObject.SetActive(false);
 
-        for(int i = 0; i < roomList.Count; i++)
+        for (int i = 0; i < roomList.Count; i++)
         {
-            if(roomList[i].PlayerCount != roomList[i].MaxPlayers && !roomList[i].RemovedFromList)
+            if (roomList[i].PlayerCount != roomList[i].MaxPlayers && !roomList[i].RemovedFromList)
             {
                 RoomButtonScript newButton = Instantiate(theRoomButton, theRoomButton.transform.parent);
                 newButton.SetButtonDetails(roomList[i]);
@@ -278,6 +284,7 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void JoinRoom(RoomInfo inputInfo)
     {
+        // Join a specific room
         PhotonNetwork.JoinRoom(inputInfo.Name);
 
         CloseMenus();
@@ -287,11 +294,11 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void SetNickName()
     {
+        // Set the player's nickname
         if (!string.IsNullOrEmpty(nameInput.text))
         {
             PhotonNetwork.NickName = nameInput.text;
 
-            //Saving the selected username for subsequent games.
             PlayerPrefs.SetString("playerName", nameInput.text);
 
             CloseMenus();
@@ -300,19 +307,20 @@ public class Launcher : MonoBehaviourPunCallbacks
             hasSetNick = 1;
             PlayerPrefs.SetInt("UserName", hasSetNick);
 
-            //Showing the username in the menu.
             username.text = nameInput.text;
         }
     }
 
     public void StartGame()
     {
+        // Start the game
         loadingText.gameObject.SetActive(true);
         PhotonNetwork.LoadLevel(allMaps[0]);
     }
 
     public override void OnMasterClientSwitched(Player newMasterClient)
     {
+        // Handle master client switching
         if (PhotonNetwork.IsMasterClient)
         {
             startButton.SetActive(true);
@@ -325,7 +333,7 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void Appearance()
     {
-        //Shows the appearance menu, where the user can change the character's skin.
+        // Show appearance menu
         menuButtons.SetActive(false);
         appearanceButtons.SetActive(true);
         menuEffects.rotatePlayer = 1;
@@ -334,6 +342,7 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void MainMenuBack()
     {
+        // Return to main menu
         menuButtons.SetActive(true);
         appearanceButtons.SetActive(false);
         configurationMenu.SetActive(false);
@@ -343,27 +352,32 @@ public class Launcher : MonoBehaviourPunCallbacks
 
     public void Configuration()
     {
+        // Show configuration menu
         menuButtons.SetActive(false);
         CameraMovement.Configuration = true;
     }
 
     public void YellowSkin()
     {
+        // Change skin to yellow
         SendVariable.ChangeSkin(0);
     }
 
     public void PurpleSkin()
     {
+        // Change skin to purple
         SendVariable.ChangeSkin(1);
     }
 
     public void RedDamagedSkin()
     {
+        // Change skin to red damaged
         SendVariable.ChangeSkin(2);
     }
 
     public void QuitGame()
     {
+        // Quit the game
         Application.Quit();
     }
 }
