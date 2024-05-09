@@ -7,92 +7,74 @@ using UnityEngine.Audio;
 
 public class Graphics : MonoBehaviour
 {
+    // Toggle buttons for fullscreen, vsync, and reflection probes
     public Toggle fullscreenTog, vsyncTog, reflectionTog;
+
+    // UI panels for graphics, audio, and controls settings
     public GameObject graphicsSettings, audioSettings, controlsSettings;
 
-    //Resoluciones
+    // List of available screen resolutions
     public List<ResItem> resolutions = new List<ResItem>();
-    private int selectedRes;
-    public TMP_Text resolutionLabel;
+    private int selectedRes; // Index of the selected resolution
+    public TMP_Text resolutionLabel; // UI text to display selected resolution
 
-    //Calidades
+    // List of available graphics qualities
     public List<QualityItem> qualities = new List<QualityItem>();
-    private int selectedQuality;
-    public TMP_Text qualityLabel;
+    private int selectedQuality; // Index of the selected quality
+    public TMP_Text qualityLabel; // UI text to display selected quality
 
-    //Reflection Probes
+    // GameObject for controlling reflection probes
     public GameObject reflectionProbes;
 
-    //Menus
+    // UI panels for different menus
     public GameObject graphicsMenu, audioMenu, controlsMenu;
 
-    //Audio
+    // Audio settings
     public AudioMixer mainMixer;
-    public TMP_Text masterLabel, musicLabel, effectsLabel;
-    public Slider masterSlider, musicSlider, effectsSlider;
+    public TMP_Text masterLabel, musicLabel, effectsLabel; // UI text for volume labels
+    public Slider masterSlider, musicSlider, effectsSlider; // Sliders for volume control
 
     // Start is called before the first frame update
     void Start()
     {
+        // Set initial state of toggle buttons
         fullscreenTog.isOn = Screen.fullScreen;
+        vsyncTog.isOn = QualitySettings.vSyncCount != 0;
 
-        if (QualitySettings.vSyncCount == 0)
-        {
-            vsyncTog.isOn = false;
-        }
-        else
-        {
-            vsyncTog.isOn = true;
-        }
-
+        // Set reflection probes based on player preference
         float ReflectionFloat = PlayerPrefs.GetFloat("Reflections");
-        if(ReflectionFloat == 0)
-        {
-            reflectionProbes.SetActive(false);
-            reflectionTog.isOn = false;
-        }
-        else
-        {
-            reflectionProbes.SetActive(true);
-            reflectionTog.isOn = true;
-        }
+        reflectionProbes.SetActive(ReflectionFloat != 0);
+        reflectionTog.isOn = ReflectionFloat != 0;
 
+        // Find and set the closest available resolution to current screen resolution
         bool foundRes = false;
-        for(int i = 0; i < resolutions.Count; i++)
+        for (int i = 0; i < resolutions.Count; i++)
         {
-            if(Screen.width == resolutions[i].horizontal && Screen.height == resolutions[i].vertical)
+            if (Screen.width == resolutions[i].horizontal && Screen.height == resolutions[i].vertical)
             {
                 foundRes = true;
-
                 selectedRes = i;
-
                 UpdateResLabel();
             }
         }
-
         if (!foundRes)
         {
             FindClosestResolution();
         }
 
+        // Set initial graphics quality level
         selectedQuality = QualitySettings.GetQualityLevel();
         UpdateQualityLabel();
 
-        //Audio setting saved
+        // Load saved audio settings
         if (PlayerPrefs.HasKey("MasterVol"))
-        {
             mainMixer.SetFloat("MasterVol", PlayerPrefs.GetFloat("MasterVol"));
-        }
         if (PlayerPrefs.HasKey("MusicVol"))
-        {
             mainMixer.SetFloat("MusicVol", PlayerPrefs.GetFloat("MusicVol"));
-        }
         if (PlayerPrefs.HasKey("EffectsVol"))
-        {
             mainMixer.SetFloat("EffectsVol", PlayerPrefs.GetFloat("EffectsVol"));
-        }
 
-        //Set initial volume values to sliders
+        // Set initial volume values to sliders
         float vol;
         mainMixer.GetFloat("MasterVol", out vol);
         masterSlider.value = vol;
@@ -101,11 +83,12 @@ public class Graphics : MonoBehaviour
         mainMixer.GetFloat("EffectsVol", out vol);
         effectsSlider.value = vol;
 
+        // Update volume labels
         masterLabel.text = (masterSlider.value + 80).ToString();
         musicLabel.text = (musicSlider.value + 80).ToString();
         effectsLabel.text = (effectsSlider.value + 80).ToString();
 
-        //Configuration menus 
+        // Set initial active settings menu
         graphicsSettings.SetActive(true);
         audioSettings.SetActive(false);
         controlsSettings.SetActive(false);
@@ -115,6 +98,7 @@ public class Graphics : MonoBehaviour
         audioMenu.SetActive(false);
     }
 
+    // Deactivate all settings menus
     public void MenusNotActive()
     {
         graphicsSettings.SetActive(false);
@@ -126,49 +110,45 @@ public class Graphics : MonoBehaviour
         audioMenu.SetActive(false);
     }
 
+    // Activate graphics settings menu
     public void GraphicsActive()
     {
         graphicsSettings.SetActive(true);
         graphicsMenu.SetActive(true);
     }
 
+    // Activate audio settings menu
     public void AudioActive()
     {
         audioSettings.SetActive(true);
         audioMenu.SetActive(true);
     }
 
+    // Activate controls settings menu
     public void ControlsActive()
     {
         controlsSettings.SetActive(true);
         controlsMenu.SetActive(true);
     }
 
+    // Find the closest available screen resolution
     public void FindClosestResolution()
     {
-        // Calcular la diferencia entre la resolución actual y la primera resolución de la lista
         int closestDistance = Screen.currentResolution.width - resolutions[0].horizontal;
 
-        // Iterar sobre todas las resoluciones predefinidas para encontrar la más cercana
         for (int i = 0; i < resolutions.Count; i++)
         {
-            //Cuando sea una resolución mayor al tamaño de la pantalla, volver a calcular con la siguiente resolución
-            if(closestDistance < 0)
-            {
+            if (closestDistance < 0)
                 closestDistance = Screen.currentResolution.width - resolutions[i + 1].horizontal;
-            }
 
-            // Calcular la diferencia entre la resolución actual y la resolución actual del bucle
             int distance = Screen.currentResolution.width - resolutions[i].horizontal;
 
-            //Si la distancia es menor a cero, vuelve a calacularla con la siguiente resolución
             if (distance < 0)
             {
                 resolutions.Remove(resolutions[i]);
                 distance = Screen.currentResolution.width - resolutions[i + 1].horizontal;
             }
 
-            // Si la distancia calculada es menor que la distancia más cercana actual, actualizar la resolución más cercana
             if (distance > 0 && distance <= closestDistance)
             {
                 closestDistance = distance;
@@ -179,120 +159,107 @@ public class Graphics : MonoBehaviour
         UpdateResLabel();
     }
 
+    // Apply graphics settings
     public void ApplyGraphics()
     {
-        QualitySettings.SetQualityLevel(selectedQuality,true);
+        // Set graphics quality
+        QualitySettings.SetQualityLevel(selectedQuality, true);
 
-        if (vsyncTog.isOn)
-        {
-            QualitySettings.vSyncCount = 1;
-        }
-        else
-        {
-            QualitySettings.vSyncCount = 0;
-        }
+        // Set vsync
+        QualitySettings.vSyncCount = vsyncTog.isOn ? 1 : 0;
 
-        Screen.SetResolution(resolutions[selectedRes].horizontal, resolutions[selectedRes].vertical,fullscreenTog.isOn);
+        // Set screen resolution
+        Screen.SetResolution(resolutions[selectedRes].horizontal, resolutions[selectedRes].vertical, fullscreenTog.isOn);
 
-        if (reflectionTog.isOn == false)
-        {
-            reflectionProbes.SetActive(false);
-            PlayerPrefs.SetFloat("Reflections", 0);
-        }
-        else
-        {
-            reflectionProbes.SetActive(true);
-            PlayerPrefs.SetFloat("Reflections", 1);
-        }
+        // Set reflection probes
+        reflectionProbes.SetActive(reflectionTog.isOn);
+        PlayerPrefs.SetFloat("Reflections", reflectionTog.isOn ? 1 : 0);
     }
 
+    // Set master volume
     public void SetMasterVolume()
     {
         masterLabel.text = (masterSlider.value + 80).ToString();
-
         mainMixer.SetFloat("MasterVol", masterSlider.value);
-
         PlayerPrefs.SetFloat("MasterVol", masterSlider.value);
     }
 
+    // Set music volume
     public void SetMusicVolume()
     {
         musicLabel.text = (musicSlider.value + 80).ToString();
-
         mainMixer.SetFloat("MusicVol", musicSlider.value);
-
         PlayerPrefs.SetFloat("MusicVol", musicSlider.value);
     }
 
+    // Set effects volume
     public void SetEffectVolume()
     {
         effectsLabel.text = (effectsSlider.value + 80).ToString();
-
         mainMixer.SetFloat("EffectsVol", effectsSlider.value);
-
         PlayerPrefs.SetFloat("EffectsVol", effectsSlider.value);
     }
 
+    // Switch to the previous screen resolution
     public void ResLeft()
     {
         selectedRes--;
-        if(selectedRes < 0)
-        {
+        if (selectedRes < 0)
             selectedRes = 0;
-        }
 
         UpdateResLabel();
     }
 
+    // Switch to the next screen resolution
     public void ResRight()
     {
         selectedRes++;
         if (selectedRes > resolutions.Count - 1)
-        {
             selectedRes = resolutions.Count - 1;
-        }
 
         UpdateResLabel();
     }
 
+    // Switch to the previous graphics quality
     public void QualityLeft()
     {
         selectedQuality--;
         if (selectedQuality < 0)
-        {
             selectedQuality = 0;
-        }
 
         UpdateQualityLabel();
     }
 
+    // Switch to the next graphics quality
     public void QualityRight()
     {
         selectedQuality++;
         if (selectedQuality > qualities.Count - 1)
-        {
             selectedQuality = qualities.Count - 1;
-        }
 
         UpdateQualityLabel();
     }
 
+    // Update the resolution label UI text
     public void UpdateResLabel()
     {
         resolutionLabel.text = resolutions[selectedRes].horizontal.ToString() + " x " + resolutions[selectedRes].vertical.ToString();
     }
 
+    // Update the quality label UI text
     public void UpdateQualityLabel()
     {
         qualityLabel.text = qualities[selectedQuality].qualityName.ToString();
     }
 
+    // Serializable class for screen resolutions
     [System.Serializable]
     public class ResItem
     {
         public int horizontal, vertical;
     }
 
+    // Serializable class for graphics qualities
     [System.Serializable]
     public class QualityItem
     {
